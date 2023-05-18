@@ -39,17 +39,16 @@ module.exports = class BubbleDataClient {
     
     const endpoint = `obj/${type}?limit=${limit}&cursor=${cursor}&constraints=${constraintParam}`;
     const url = this.baseURL + "/" + endpoint;
-    console.log(url);
-    const response = await request(url, this.apiKey, 'GET');
-    
-    if (fetchAll && response.remaining > 0) {
+    const res = await request(url, this.apiKey, 'GET');
+
+    if (fetchAll && res.response.remaining > 0) {
       const nextCursor = cursor + limit;
       const remainingData = await this.getThings(type, constraints, limit, nextCursor, fetchAll);
-      response.results = response.results.concat(remainingData.results);
-      response.remaining = remainingData.remaining;
+      res.response.results = res.response.results.concat(remainingData.results);
+      res.response.remaining = remainingData.remaining;
     }
     
-    return response;
+    return res.response;
   }
 
   /**
