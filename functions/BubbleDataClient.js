@@ -25,30 +25,46 @@ module.exports = class BubbleDataClient {
   }
 
   /**
-   * Retrieves a list of things from the Bubble API with optional constraints, pagination, and fetchAll flag.
-   *
-   * @param {string} type - The type of thing to retrieve.
-   * @param {Array} [constraints=[]] - An array of constraint objects to filter the results.
-   * @param {number} [limit=100] - The maximum number of results to return per request.
-   * @param {number} [cursor=0] - The starting index for the results.
-   * @param {boolean} [fetchAll=false] - Whether to fetch all results across multiple pages.
-   * @returns {Promise<Object>} A promise that resolves to the response object containing the results.
-   */
-  async getThings(type, constraints = [], limit = 100, cursor = 0, fetchAll = false) {
+    * Retrieves a list of things based on the provided arguments.
+    *
+    * @async
+    * @param {Object} arg - An object containing the following properties:
+    *   @param {String} arg.type - Specifies the type of things to retrieve.
+    *   @param {Array} [arg.constraints=[]] - Optional. An array of constraints to apply to the query.
+    *   @param {Number} [arg.limit=100] - Optional. The maximum number of results to retrieve.
+    *   @param {Number} [arg.cursor=0] - Optional. The starting cursor position for pagination.
+    *   @param {Boolean} [arg.fetchAll=false] - Optional. Indicates whether to fetch all remaining results.
+    * @throws {Error} Throws an error if the `type` property is missing in the `arg` object.
+    * @returns {Promise<Object>} A promise that resolves to the response object containing the retrieved things.
+  */
+  async getThings(arg) {
+    const type = arg.type,
+        constraints = arg.constraints || [],
+        limit = arg.limit || 100,
+        cursor = arg.cursor || 0,
+        fetchAll = arg.fetchAll || false;
+    if (!type) {
+      throw new Error('type is required');
+    }
     const constraintParam = encodeURIComponent(JSON.stringify(constraints));
     
     const endpoint = `obj/${type}?limit=${limit}&cursor=${cursor}&constraints=${constraintParam}`;
     const url = this.baseURL + "/" + endpoint;
-    const res = await request(url, this.apiKey, 'GET');
+    try {
+      const res = await request(url, this.apiKey, 'GET');
 
-    if (fetchAll && res.response.remaining > 0) {
-      const nextCursor = cursor + limit;
-      const remainingData = await this.getThings(type, constraints, limit, nextCursor, fetchAll);
-      res.response.results = res.response.results.concat(remainingData.results);
-      res.response.remaining = remainingData.remaining;
-    }
+      if (fetchAll && res.response.remaining > 0) {
+        const nextCursor = cursor + limit;
+        arg.cursor = nextCursor;
+        const remainingData = await this.getThings(arg);
+        res.response.results = res.response.results.concat(remainingData.results);
+        res.response.remaining = remainingData.remaining;
+      }
     
-    return res.response;
+      return res.response;
+    } catch (err) {
+      throw err;
+    }
   }
 
   /**
